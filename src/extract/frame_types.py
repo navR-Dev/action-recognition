@@ -17,5 +17,5 @@ result = subprocess.run(cmd, capture_output=True, text=True)
 data = json.loads(result.stdout)
 
 for i, frame in enumerate(data["frames"]):
-    if "pict_type" in frame:
-        print(f"Frame {i}: {frame['pict_type']}")
+    if frame.get("pict_type") == "B":
+        print(f"B-frame at index {i}")
