@@ -1,10 +1,27 @@
 import numpy as np
 import os
 
-files = os.listdir("outputs/maps")
+MAP_ROOT = "outputs/maps"
 
-for f in files[:5]:
-    m = np.load("outputs/maps/"+f)
-    mag = np.sqrt(m[:,:,0]**2 + m[:,:,1]**2)
+videos = [d for d in os.listdir(MAP_ROOT)
+          if os.path.isdir(os.path.join(MAP_ROOT, d))]
 
-    print(f, "mean:", mag.mean(), "max:", mag.max())
+for video in videos[:5]:
+    video_path = os.path.join(MAP_ROOT, video)
+    files = sorted(os.listdir(video_path))
+
+    if not files:
+        print(video, "has no maps")
+        continue
+
+    sample_file = os.path.join(video_path, files[0])
+
+    m = np.load(sample_file)
+    mag = np.sqrt(m[:, :, 0]**2 + m[:, :, 1]**2)
+
+    print(
+        video,
+        "| shape:", m.shape,
+        "| mean:", round(mag.mean(), 4),
+        "| max:", round(mag.max(), 4)
+    )

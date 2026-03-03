@@ -1,5 +1,23 @@
+# Virtual environment
 bframe_env/
+
+# Data folders
+raw/
+encoded/
 outputs/
+
+# Numpy artifacts
 *.npy
+
+# Python cache
 __pycache__/
 *.pyc
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Logs / checkpoints (future proofing)
+*.pth
+*.pt
+*.log

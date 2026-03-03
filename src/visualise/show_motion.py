@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 
-path = "outputs/maps/frame_0003.npy"   # change file to test
+path = "outputs/maps/frame_0009.npy"   # change file to test
 
 flow = np.load(path)
 
