@@ -1,5 +1,5 @@
 import torch
-from src.models.baseline_model import MotionNet
+from models.motion_net import MotionNet
 
 model = MotionNet(num_classes=5)
 

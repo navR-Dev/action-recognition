@@ -1,62 +1,109 @@
+import os
 import torch
 from torch.utils.data import DataLoader
 
-from src.models.motion_model import MotionNetV2
+from src.models.motion_net_v3 import MotionNetLite
 from src.data.dataset import MotionDataset
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-train_dataset = MotionDataset("outputs/clips/train")
-val_dataset = MotionDataset("outputs/clips/val")
+# ---------------- CONFIG ----------------
+EPOCHS = 10
+BATCH_SIZE = 2        # 🔥 small for CPU
+LR = 1e-3
+WEIGHT_DECAY = 1e-4
+CHECKPOINT_DIR = "checkpoints"
+torch.set_num_threads(8)
+# ----------------------------------------
 
-train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
 
-num_classes = len(train_dataset.classes)
+def main():
 
-model = MotionNetV2(num_classes=num_classes).to(device)
+    device = torch.device("cpu")
+    print("Using device:", device)
 
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-loss_fn = torch.nn.CrossEntropyLoss()
+    train_dataset = MotionDataset("outputs/clips/train")
+    val_dataset = MotionDataset("outputs/clips/val")
 
-for epoch in range(10):
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=True,
+        num_workers=0
+    )
 
-    # ---- TRAIN ----
-    model.train()
-    train_correct = 0
-    train_total = 0
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=False,
+        num_workers=0
+    )
 
-    for x, y in train_loader:
-        x = x.to(device)
-        y = y.to(device)
+    num_classes = len(train_dataset.classes)
 
-        pred = model(x)
-        loss = loss_fn(pred, y)
+    model = MotionNetLite(num_classes=num_classes).to(device)
 
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+    optimizer = torch.optim.Adam(
+        model.parameters(),
+        lr=LR,
+        weight_decay=WEIGHT_DECAY
+    )
 
-        train_correct += (pred.argmax(1) == y).sum().item()
-        train_total += y.size(0)
+    loss_fn = torch.nn.CrossEntropyLoss()
 
-    train_acc = train_correct / train_total
+    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
-    # ---- VALIDATION ----
-    model.eval()
-    val_correct = 0
-    val_total = 0
+    for epoch in range(EPOCHS):
 
-    with torch.no_grad():
-        for x, y in val_loader:
-            x = x.to(device)
+        print(f"\n===== Epoch {epoch} =====")
+
+        model.train()
+        train_correct = 0
+        train_total = 0
+
+        for batch_idx, (x, y) in enumerate(train_loader):
+
+            if batch_idx % 50 == 0:
+                print(f"Batch {batch_idx}/{len(train_loader)}")
+
+            x = x.to(device).float()
             y = y.to(device)
 
             pred = model(x)
+            loss = loss_fn(pred, y)
 
-            val_correct += (pred.argmax(1) == y).sum().item()
-            val_total += y.size(0)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-    val_acc = val_correct / val_total
+            train_correct += (pred.argmax(1) == y).sum().item()
+            train_total += y.size(0)
 
-    print(f"Epoch {epoch} | Train Acc: {train_acc:.4f} | Val Acc: {val_acc:.4f}")
+        train_acc = train_correct / train_total
+
+        # Validation
+        model.eval()
+        val_correct = 0
+        val_total = 0
+
+        with torch.no_grad():
+            for x, y in val_loader:
+                x = x.to(device).float()
+                y = y.to(device)
+
+                pred = model(x)
+                val_correct += (pred.argmax(1) == y).sum().item()
+                val_total += y.size(0)
+
+        val_acc = val_correct / val_total
+
+        print(
+            f"Epoch {epoch} | "
+            f"Train Acc: {train_acc:.4f} | "
+            f"Val Acc: {val_acc:.4f}"
+        )
+
+    print("Training complete.")
+
+
+if __name__ == "__main__":
+    main()

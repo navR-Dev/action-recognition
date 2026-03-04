@@ -10,11 +10,6 @@ BFRAMES = 3
 GOP = 30
 PRESET = "medium"
 
-def get_class_name(filename):
-    # UCF format: v_ClassName_gXX_cYY.avi
-    name = filename.split("_")
-    return name[1]
-
 def reencode_video(input_path, output_path):
     cmd = [
         "ffmpeg",
@@ -32,26 +27,31 @@ def reencode_video(input_path, output_path):
     subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 def main():
+
     Path(OUTPUT_ROOT).mkdir(exist_ok=True)
 
-    for file in os.listdir(INPUT_ROOT):
+    for class_name in os.listdir(INPUT_ROOT):
 
-        if not file.lower().endswith((".avi", ".mp4")):
+        class_input_path = Path(INPUT_ROOT) / class_name
+
+        if not class_input_path.is_dir():
             continue
 
-        class_name = get_class_name(file)
+        class_output_path = Path(OUTPUT_ROOT) / class_name
+        class_output_path.mkdir(parents=True, exist_ok=True)
 
-        class_output = Path(OUTPUT_ROOT) / class_name
-        class_output.mkdir(parents=True, exist_ok=True)
+        for video_file in class_input_path.iterdir():
 
-        input_path = Path(INPUT_ROOT) / file
-        output_file = class_output / (Path(file).stem + "_bf.mp4")
+            if video_file.suffix.lower() not in [".avi", ".mp4"]:
+                continue
 
-        if output_file.exists():
-            continue
+            output_file = class_output_path / (video_file.stem + "_bf.mp4")
 
-        print(f"Encoding {file} → {class_name}/")
-        reencode_video(input_path, output_file)
+            if output_file.exists():
+                continue
+
+            print(f"Encoding {class_name}/{video_file.name}")
+            reencode_video(video_file, output_file)
 
     print("Re-encoding complete.")
 

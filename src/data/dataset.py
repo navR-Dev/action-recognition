@@ -3,43 +3,48 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+
 class MotionDataset(Dataset):
 
     def __init__(self, root):
+
         self.samples = []
 
-        # Only keep directories (classes)
         self.classes = sorted([
             d for d in os.listdir(root)
             if os.path.isdir(os.path.join(root, d))
         ])
 
         for label, cls in enumerate(self.classes):
+
             folder = os.path.join(root, cls)
 
-            files = [
-                f for f in os.listdir(folder)
-                if f.endswith(".npy")
-            ]
+            for f in os.listdir(folder):
+                if f.endswith(".npy"):
 
-            for f in files:
-                path = os.path.join(folder, f)
-                self.samples.append((path, label))
+                    path = os.path.join(folder, f)
 
-        print(f"Loaded {len(self.samples)} samples from {len(self.classes)} classes.")
+                    clips = np.load(path)  # load fully (dataset is now small)
+
+                    for i in range(clips.shape[0]):
+                        self.samples.append((path, i, label))
+
+        print(
+            f"Loaded {len(self.samples)} samples "
+            f"from {len(self.classes)} classes."
+        )
 
     def __len__(self):
         return len(self.samples)
 
     def __getitem__(self, idx):
-        path, label = self.samples[idx]
 
-        clip = np.load(path)
+        path, clip_idx, label = self.samples[idx]
 
-        # Normalize motion (important)
-        clip = clip / (np.abs(clip).max() + 1e-6)
+        clips = np.load(path)
+        clip = clips[clip_idx]   # (T, H, W, 2)
 
-        clip = torch.tensor(clip, dtype=torch.float32)
-        clip = clip.permute(3, 0, 1, 2)  # (C, T, H, W)
+        clip = torch.tensor(clip, dtype=torch.float16)
+        clip = clip.permute(3, 0, 1, 2)  # (2, T, H, W)
 
         return clip, label
