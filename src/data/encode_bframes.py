@@ -10,7 +10,9 @@ BFRAMES = 3
 GOP = 30
 PRESET = "medium"
 
+
 def reencode_video(input_path, output_path):
+
     cmd = [
         "ffmpeg",
         "-y",
@@ -24,7 +26,14 @@ def reencode_video(input_path, output_path):
         str(output_path)
     ]
 
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    result = subprocess.run(
+        cmd,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+
+    return result.returncode == 0
+
 
 def main():
 
@@ -51,9 +60,22 @@ def main():
                 continue
 
             print(f"Encoding {class_name}/{video_file.name}")
-            reencode_video(video_file, output_file)
+
+            success = reencode_video(video_file, output_file)
+
+            # -------- SAFE RAW DELETE --------
+            if (
+                success
+                and output_file.exists()
+                and output_file.stat().st_size > 0
+            ):
+                print(f"Deleting raw file: {video_file}")
+                video_file.unlink()
+            else:
+                print(f"Encoding failed — raw file kept: {video_file}")
 
     print("Re-encoding complete.")
+
 
 if __name__ == "__main__":
     main()

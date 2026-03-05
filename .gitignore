@@ -21,3 +21,6 @@ Thumbs.db
 *.pth
 *.pt
 *.log
+
+# Visualisers
+src/visualise/
